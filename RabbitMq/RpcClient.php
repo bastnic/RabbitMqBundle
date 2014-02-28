@@ -10,6 +10,7 @@ class RpcClient extends BaseAmqp
     protected $requests = 0;
     protected $replies = array();
     protected $queueName;
+    protected $timeout = 0;
 
     public function initClient()
     {
@@ -29,19 +30,24 @@ class RpcClient extends BaseAmqp
         $this->getChannel()->basic_publish($msg, $server, $routingKey);
 
         $this->requests++;
+		
+        if (isset($server['expiration']) && $server['expiration'] > $this->timeout) {
+            $this->timeout = $server['expiration'];
+        }
     }
 
-    public function getReplies($timeout = 0)
+    public function getReplies()
     {
         $this->replies = array();
         $this->getChannel()->basic_consume($this->queueName, '', false, true, false, false, array($this, 'processMessage'));
 
         while (count($this->replies) < $this->requests) {
-            $this->getChannel()->wait(null, false, $timeout);
+            $this->getChannel()->wait(null, false, $this->timeout);
         }
 
         $this->getChannel()->basic_cancel($this->queueName);
         $this->requests = 0;
+        $this->timeout = 0;
 
         return $this->replies;
     }
