@@ -25,6 +25,8 @@ class RpcClient extends BaseAmqp
 
         $msg = new AMQPMessage($msgBody, array('content_type' => 'text/plain',
                                                'reply_to' => $this->queueName,
+                                               'delivery_mode' => 1, // non durable
+                                               'expiration' => $this->timeout,
                                                'correlation_id' => $requestId));
 
         $this->getChannel()->basic_publish($msg, $server, $routingKey);
